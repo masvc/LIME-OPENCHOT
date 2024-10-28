@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="LIME OPENCHOT"
+      content="Github認証を活用して掲示板でメッセージコミュニケーションをしましょう！"
+    />
+    <title>情報交換掲示板｜LIME OPENCHOT</title>
+    <link rel="stylesheet" href="css/destyle.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="icon" href="img/favicon.png" id="favicon" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1><a href="index.html">LIME OPENCHOT</a></h1>
+      </div>
+    </header>
+    <main>
+      <section class="mainpage">
+        <!-- <div class="profile">
+          <img src="img/github.png" alt="" />
+          <p>githubのプロフィール情報を入れる</p>
+        </div> -->
+        <div class="message">
+          <div class="titlebox">
+            <h2 class="title">情報交換掲示板</h2>
+          </div>
+          <div class="namebox">
+            <div class="name">NAME：<input type="text" id="uname" /></div>
+          </div>
+          <div class="textareabox">
+            <div class="textarea">
+              <textarea
+                id="text"
+                cols="30"
+                rows="10"
+                placeholder="COMMENT：ここにチャットの内容を記入してください！"
+              ></textarea>
+            </div>
+          </div>
+          <div class="sendbox">
+            <button id="send">送信</button>
+          </div>
+          <div
+            id="output"
+            class="output"
+            style="
+              overflow: auto;
+              height: 300px;
+              width: 100%;
+              word-wrap: break-word;
+              white-space: normal;
+            "
+          ></div>
+        </div>
+      </section>
+    </main>
+    <footer>©️G`s ACADEMY</footer>
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        push,
+        set,
+        onChildAdded,
+        remove,
+        onChildRemoved,
+        update,
+        onChildChanged,
+      } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+      import {
+        getAuth,
+        signInWithPopup,
+        GoogleAuthProvider,
+        signOut,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/9.13.0/firebase-auth.js";
+
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "***********************************",
+        authDomain: "*******************************",
+        databaseURL: "******************************",
+        projectId: "********************************",
+        storageBucket: "****************************",
+        messagingSenderId: "************************",
+        appId: "************************************",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app); // RDBに接続
+      const dbRef = ref(db, "chat"); // RDB内のチャットを利用する
+
+      // データ送信をボタンクリックで
+      $("#send").on("click", function () {
+        const uname = $("#uname").val();
+        const text = $("#text").val();
+        alert(uname + text); // 確認用
+      });
+
+      // データ送信をテキストエリアにてエンターキーで
+      $("#text").on("keydown", function (e) {
+        console.log(e);
+        if (e.keyCode == 13) {
+          const msg = {
+            uname: $("#uname").val(),
+            text: $("#text").val(),
+          };
+          const newPostRef = push(dbRef);
+          set(newPostRef, msg);
+        }
+      });
+
+      // Firebaseへのデータ登録
+      $("#send").on("click", function () {
+        const msg = {
+          uname: $("#uname").val(),
+          text: $("#text").val(),
+        };
+        const newPostRef = push(dbRef);
+        set(newPostRef, msg);
+      });
+
+      // 受信データの処理
+      onChildAdded(dbRef, function (data) {
+        const msg = data.val();
+        const key = data.key; //削除と更新に必須
+        let h = '<p id="' + key + '"  class="outputtext" >';
+        h += "NAME：" + msg.uname;
+        h += "<br>";
+        h +=
+          '<span contentEditable="true" id="' +
+          key +
+          '_update">' +
+          "COMMENT：" +
+          msg.text +
+          "</span>";
+        h += '<span class="remove" data-key="' + key + '"><🚮></span>';
+        h += '<span class="update" data-key="' + key + '"><🆕></span>';
+        h += "</p>";
+        $("#output").prepend(h); //prependは上にappendなら下に追加
+      });
+
+      //削除実行
+      $("#output").on("click", ".remove", function () {
+        const key = $(this).attr("data-key");
+        const remove_item = ref(db, "chat/" + key);
+        remove(remove_item); //FIREBASEのデータ削除
+      });
+
+      //更新実行
+      $("#output").on("click", ".update", function () {
+        const key = $(this).attr("data-key");
+        update(ref(db, "chat/" + key), {
+          text: $("#" + key + "_update").html(),
+        });
+      });
+
+      //削除処理のFirebase側イベント
+      onChildRemoved(dbRef, (data) => {
+        $("#" + data.key).remove(); //DOM関数
+      });
+
+      //更新処理のFirebase側イベント
+      onChildChanged(dbRef, (data) => {
+        $("#" + data.key + "_update").html(data.val().text);
+        $("#" + data.key + "_update")
+          .fadeOut(800)
+          .fadeIn(800);
+      });
+    </script>
+  </body>
+</html>
